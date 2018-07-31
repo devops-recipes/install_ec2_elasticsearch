@@ -1,0 +1,46 @@
+resources:
+  - name: install_ec2_elasticsearch_repo
+    type: gitRepo
+    integration: "drship_github"
+    versionTemplate:
+      sourceName: "devops-recipes/install_ec2_elasticsearch"
+      branch: master
+
+jobs:
+  - name: install_ec2_elasticsearch_job
+    type: runSh
+    steps:
+      - IN: install_ec2_elasticsearch_repo
+        switch: off
+      - IN: aws_ec2_tf_ssh
+        switch: off
+      - IN: aws_ec2_tf_info
+        switch: off
+      - TASK:
+          name: install_elasticsearch
+          script:
+            - pushd $(shipctl get_resource_state "install_ec2_elasticsearch_repo")
+            - scp -i $AWS_EC2_TF_SSH_KEYPATH ./install_elasticsearch.sh ubuntu@$ec2_ins_0_ip:install_elasticsearch.sh
+            - ssh -i $AWS_EC2_TF_SSH_KEYPATH ubuntu@$ec2_ins_0_ip "chmod +x install_elasticsearch.sh"
+            - ssh -i $AWS_EC2_TF_SSH_KEYPATH ubuntu@$ec2_ins_0_ip "sudo ./install_elasticsearch.sh"
+            - popd
+    flags:
+      - aws
+      - elasticsearch
+
+  - name: uninstall_ec2_elasticsearch_job
+    type: runSh
+    steps:
+      - IN: install_ec2_elasticsearch_repo
+        switch: off
+      - IN: aws_ec2_tf_ssh
+        switch: off
+      - IN: aws_ec2_tf_info
+        switch: off
+      - TASK:
+          name: uninstall_elasticsearch
+          script:
+            - ssh -i $AWS_EC2_TF_SSH_KEYPATH ubuntu@$ec2_ins_0_ip "sudo apt-get --purge autoremove -y elasticsearch"
+    flags:
+      - aws
+      - elasticsearch
